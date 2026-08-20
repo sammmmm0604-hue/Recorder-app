@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🪈 直笛即時樂譜跟隨練習器</title>
+  <!-- 載入 OpenSheetMusicDisplay 樂譜渲染庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.8/build/opensheetmusicdisplay.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f8fafc;
+      color: #1e293b;
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    h1 { margin-top: 0; font-size: 24px; }
+    .status-panel {
+      display: flex;
+      justify-content: space-around;
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 12px;
+      margin: 16px 0;
+    }
+    .status-item { font-size: 14px; color: #64748b; }
+    .status-value {
+      font-size: 22px;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+    #target-note { color: #2563eb; }
+    #detected-note { color: #059669; }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    #osmd-canvas {
+      width: 100%;
+      min-height: 250px;
+      margin-top: 20px;
+      background: #fff;
+    }
+    .tip {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🪈 直笛即時樂譜跟隨練習器</h1>
+  <p style="color: #475569; margin-bottom: 20px;">
+    吹出當前標註的音高，樂譜游標將會自動推進！
+  </p>
+
+  <button id="start-btn" class="btn">🎤 啟動麥克風與練習</button>
+
+  <div class="status-panel">
+    <div class="status-item">
+      目標音符
+      <div id="target-note" class="status-value">--</div>
+    </div>
+    <div class="status-item">
+      目前吹奏
+      <div id="detected-note" class="status-value">--</div>
+    </div>
+    <div class="status-item">
+      偵測頻率 (Hz)
+      <div id="detected-freq" class="status-value">0.0</div>
+    </div>
+    <div class="status-item">
+      練習進度
+      <div id="progress-info" class="status-value">0 / 0</div>
+    </div>
+  </div>
+
+  <div id="osmd-canvas"></div>
+  <div class="tip">提示：請允許麥克風權限；吹奏高音直笛時請確保環境安靜。</div>
+</div>
+
+<script>
+  // 內建示範曲《小星星》片段的簡易 MusicXML 字串
+  const SAMPLE_MUSICXML = `<?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+  <score-partwise version="3.1">
+    <part-list>
+      <score-part id="P1"><part-name>Recorder</part-name></score-part>
+    </part-list>
+    <part id="P1">
+      <measure number="1">
+        <attributes>
+          <divisions>1</divisions>
+          <key><fifths>0</fifths></key>
+          <time><beats>4</beats><beat-type>4</beat-type></time>
+          <clef><sign>G</sign><line>2</line></clef>
+        </attributes>
+        <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+      </measure>
+      <measure number="2">
+        <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>G</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
+      </measure>
+      <measure number="3">
+        <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+      </measure>
+      <measure number="4">
+        <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
+      </measure>
+    </part>
+  </score-partwise>`;
+
+  const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  let osmd, audioContext, analyser, dataArray;
+  let currentTargetMidi = null;
+  let currentTargetName = "--";
+  let hitFramesCount = 0; // 用於防抖與穩定判定（需連續命中數個訊框）
+  const REQUIRED_STABLE_FRAMES = 8; // 約 120-160ms 穩定發聲即過關
+
+  // 初始化樂譜
+  async function initOSMD() {
+    osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-canvas", {
+      autoResize: true,
+      drawTitle: true,
+      followCursor: true
+    });
+    await osmd.load(SAMPLE_MUSICXML);
+    osmd.render();
+    osmd.cursor.show();
+    updateCurrentTarget();
+  }
+
+  // 取得當前游標所在音符的 MIDI 音高
+  function updateCurrentTarget() {
+    if (osmd.cursor.iterator.EndReached) {
+      document.getElementById('target-note').innerText = "🎉 完成！";
+      currentTargetMidi = null;
+      return;
+    }
+
+    const voices = osmd.cursor.VoicesUnderCursor();
+    if (voices && voices.length > 0) {
+      const notes = voices[0].notes;
+      if (notes && notes.length > 0 && !notes[0].isRest()) {
+        const pitch = notes[0].Pitch;
+        // HalfTone 是 MIDI 編號 - 12 (即 C4 = 60, OSMD halfTone = 48)
+        currentTargetMidi = pitch.halfTone + 12;
+        currentTargetName = pitch.PitchClass.name + pitch.Octave;
+        document.getElementById('target-note').innerText = currentTargetName;
+        return;
+      }
+    }
+    currentTargetMidi = null;
+    document.getElementById('target-note').innerText = "休止";
+  }
+
+  // 自相關（Autocorrelation）音高偵測算法
+  function autoCorrelate(buf, sampleRate) {
+    let SIZE = buf.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.025) return -1; // 濾除環境底噪
+
+    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+    for (let i = 0; i < SIZE / 2; i++) {
+      if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+    }
+    for (let i = 1; i < SIZE / 2; i++) {
+      if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+    }
+
+    buf = buf.slice(r1, r2);
+    SIZE = buf.length;
+    let c = new Array(SIZE).fill(0);
+    for (let i = 0; i < SIZE; i++) {
+      for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i];
+    }
+
+    let d = 0; while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < SIZE; i++) {
+      if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    }
+    return sampleRate / maxpos;
+  }
+
+  // 循環音訊監聽與樂譜對位
+  function processAudioLoop() {
+    analyser.getFloatTimeDomainData(dataArray);
+    const freq = autoCorrelate(dataArray, audioContext.sampleRate);
+
+    if (freq !== -1 && freq >= 400 && freq <= 2500) { // 高音直笛主要頻率區間 (C5 約 523Hz)
+      const midiFloat = 69 + 12 * Math.log2(freq / 440);
+      const midiRounded = Math.round(midiFloat);
+      const noteName = NOTE_NAMES[midiRounded % 12] + Math.floor(midiRounded / 12 - 1);
+
+      document.getElementById('detected-note').innerText = noteName;
+      document.getElementById('detected-freq').innerText = freq.toFixed(1);
+
+      // 音高比對判定（允許直笛微幅音準偏差）
+      if (currentTargetMidi && Math.abs(midiFloat - currentTargetMidi) <= 0.45) {
+        hitFramesCount++;
+        if (hitFramesCount >= REQUIRED_STABLE_FRAMES) {
+          // 判定過關，游標推進
+          osmd.cursor.next();
+          updateCurrentTarget();
+          hitFramesCount = 0;
+        }
+      } else {
+        hitFramesCount = Math.max(0, hitFramesCount - 1);
+      }
+    } else {
+      document.getElementById('detected-note').innerText = "--";
+      document.getElementById('detected-freq').innerText = "0.0";
+      hitFramesCount = 0;
+    }
+
+    requestAnimationFrame(processAudioLoop);
+  }
+
+  // 綁定按鈕點擊事件
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const source = audioContext.createMediaStreamSource(stream);
+
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      dataArray = new Float32Array(analyser.fftSize);
+
+      document.getElementById('start-btn').disabled = true;
+      document.getElementById('start-btn').innerText = "🎧 正在監聽直笛吹奏...";
+
+      processAudioLoop();
+    } catch (err) {
+      alert("無法啟動麥克風，請檢查瀏覽器權限設定！");
+      console.error(err);
+    }
+  });
+
+  // 網頁載入時渲染樂譜
+  window.addEventListener('load', initOSMD);
+</script>
+
+</body>
+</html>
