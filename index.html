@@ -11,8 +11,8 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
-      background-color: #f8fafc;
+      padding: 16px;
+      background-color: #f1f5f9;
       color: #1e293b;
       text-align: center;
     }
@@ -20,34 +20,35 @@
       max-width: 900px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 24px;
+      padding: 20px;
       border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     }
-    h1 { margin-top: 0; font-size: 24px; }
-    .status-panel {
+    h1 { margin: 0 0 16px 0; font-size: 22px; }
+
+    /* 控制列與譜庫選單 */
+    .toolbar {
       display: flex;
-      justify-content: space-around;
-      background: #f1f5f9;
-      padding: 16px;
-      border-radius: 12px;
-      margin: 16px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .status-item { font-size: 14px; color: #64748b; }
-    .status-value {
-      font-size: 22px;
-      font-weight: bold;
-      color: #0f172a;
-      margin-top: 4px;
+    .select-box {
+      padding: 10px 16px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      font-weight: 500;
+      outline: none;
     }
-    #target-note { color: #2563eb; }
-    #detected-note { color: #059669; }
     .btn {
       background: #2563eb;
       color: white;
       border: none;
-      padding: 12px 28px;
-      font-size: 16px;
+      padding: 10px 20px;
+      font-size: 15px;
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
@@ -55,129 +56,247 @@
     }
     .btn:hover { background: #1d4ed8; }
     .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    /* 狀態面板 */
+    .status-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .status-item { font-size: 13px; color: #64748b; }
+    .status-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+    #target-note { color: #2563eb; }
+    #detected-note { color: #059669; }
+    .status-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    .badge-listening { background: #dcfce7; color: #166534; }
+    .badge-held { background: #fee2e2; color: #991b1b; }
+
+    /* 樂譜容器 */
     #osmd-canvas {
       width: 100%;
-      min-height: 250px;
-      margin-top: 20px;
+      min-height: 220px;
       background: #fff;
+      border-radius: 8px;
+      border: 1px solid #f1f5f9;
     }
-    .tip {
-      font-size: 13px;
+
+    /* 虛擬鍵盤 */
+    .piano-section {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px dashed #cbd5e1;
+    }
+    .piano-title {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .keyboard-container {
+      display: inline-flex;
+      position: relative;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      user-select: none;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    .key {
+      display: inline-flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.1s, transform 0.05s;
+    }
+    .white-key {
+      width: 38px;
+      height: 140px;
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 0 0 4px 4px;
+      margin: 0 1px;
+      z-index: 1;
+    }
+    .white-key:active { background: #e2e8f0; transform: translateY(2px); }
+    .black-key {
+      width: 24px;
+      height: 85px;
+      background: #1e293b;
       color: #94a3b8;
-      margin-top: 12px;
+      border-radius: 0 0 3px 3px;
+      margin-left: -13px;
+      margin-right: -13px;
+      z-index: 2;
     }
+    .black-key:active { background: #334155; transform: translateY(2px); }
   </style>
 </head>
 <body>
 
 <div class="container">
   <h1>🪈 直笛即時樂譜跟隨練習器</h1>
-  <p style="color: #475569; margin-bottom: 20px;">
-    吹出當前標註的音高，樂譜游標將會自動推進！
-  </p>
 
-  <button id="start-btn" class="btn">🎤 啟動麥克風與練習</button>
+  <!-- 頂部工具列 -->
+  <div class="toolbar">
+    <select id="song-select" class="select-box">
+      <option value="twinkle">📚 譜庫：小星星 (C 大調)</option>
+      <option value="ode_to_joy">📚 譜庫：歡樂頌 (簡短示範)</option>
+    </select>
+    <button id="start-btn" class="btn">🎤 啟動麥克風監聽</button>
+  </div>
 
+  <!-- 狀態面板 -->
   <div class="status-panel">
     <div class="status-item">
       目標音符
       <div id="target-note" class="status-value">--</div>
     </div>
     <div class="status-item">
-      目前吹奏
-      <div id="detected-note" class="status-value">--</div>
+      最後聽到的音
+      <div class="status-value">
+        <span id="detected-note">--</span>
+        <span id="listening-state" class="status-badge badge-held">待機</span>
+      </div>
     </div>
     <div class="status-item">
-      偵測頻率 (Hz)
-      <div id="detected-freq" class="status-value">0.0</div>
-    </div>
-    <div class="status-item">
-      練習進度
-      <div id="progress-info" class="status-value">0 / 0</div>
+      最後偵測頻率
+      <div id="detected-freq" class="status-value">0.0 Hz</div>
     </div>
   </div>
 
+  <!-- 樂譜渲染區域 -->
   <div id="osmd-canvas"></div>
-  <div class="tip">提示：請允許麥克風權限；吹奏高音直笛時請確保環境安靜。</div>
+
+  <!-- 示範聽音虛擬鍵盤 -->
+  <div class="piano-section">
+    <div class="piano-title">🎹 直笛音準示範鋼琴（點擊發聲對音）</div>
+    <div class="keyboard-container" id="piano-keyboard"></div>
+  </div>
 </div>
 
 <script>
-  // 內建示範曲《小星星》片段的簡易 MusicXML 字串
-  const SAMPLE_MUSICXML = `<?xml version="1.0" encoding="UTF-8"?>
-  <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-  <score-partwise version="3.1">
-    <part-list>
-      <score-part id="P1"><part-name>Recorder</part-name></score-part>
-    </part-list>
-    <part id="P1">
-      <measure number="1">
-        <attributes>
-          <divisions>1</divisions>
-          <key><fifths>0</fifths></key>
-          <time><beats>4</beats><beat-type>4</beat-type></time>
-          <clef><sign>G</sign><line>2</line></clef>
-        </attributes>
-        <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-      </measure>
-      <measure number="2">
-        <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>G</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
-      </measure>
-      <measure number="3">
-        <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-      </measure>
-      <measure number="4">
-        <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
-        <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
-      </measure>
-    </part>
-  </score-partwise>`;
+  // 示範樂譜資料庫
+  const SCORE_LIBRARY = {
+    twinkle: `<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+    <score-partwise version="3.1">
+      <part-list><score-part id="P1"><part-name>Recorder</part-name></score-part></part-list>
+      <part id="P1">
+        <measure number="1">
+          <attributes>
+            <divisions>1</divisions>
+            <key><fifths>0</fifths></key>
+            <time><beats>4</beats><beat-type>4</beat-type></time>
+            <clef><sign>G</sign><line>2</line></clef>
+          </attributes>
+          <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        </measure>
+        <measure number="2">
+          <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>G</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
+        </measure>
+        <measure number="3">
+          <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        </measure>
+        <measure number="4">
+          <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration><type>half</type></note>
+        </measure>
+      </part>
+    </score-partwise>`,
+
+    ode_to_joy: `<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+    <score-partwise version="3.1">
+      <part-list><score-part id="P1"><part-name>Recorder</part-name></score-part></part-list>
+      <part id="P1">
+        <measure number="1">
+          <attributes>
+            <divisions>1</divisions>
+            <key><fifths>0</fifths></key>
+            <time><beats>4</beats><beat-type>4</beat-type></time>
+            <clef><sign>G</sign><line>2</line></clef>
+          </attributes>
+          <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        </measure>
+        <measure number="2">
+          <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+          <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+        </measure>
+      </part>
+    </score-partwise>`
+  };
 
   const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   let osmd, audioContext, analyser, dataArray;
   let currentTargetMidi = null;
-  let currentTargetName = "--";
-  let hitFramesCount = 0; // 用於防抖與穩定判定（需連續命中數個訊框）
-  const REQUIRED_STABLE_FRAMES = 8; // 約 120-160ms 穩定發聲即過關
+  let hitFramesCount = 0;
+  const REQUIRED_STABLE_FRAMES = 6; // 穩定訊框數
 
   // 初始化樂譜
-  async function initOSMD() {
-    osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-canvas", {
-      autoResize: true,
-      drawTitle: true,
-      followCursor: true
-    });
-    await osmd.load(SAMPLE_MUSICXML);
+  async function loadScore(xmlString) {
+    if (!osmd) {
+      osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-canvas", {
+        autoResize: true,
+        drawTitle: true,
+        followCursor: true
+      });
+    }
+    await osmd.load(xmlString);
     osmd.render();
     osmd.cursor.show();
     updateCurrentTarget();
   }
 
-  // 取得當前游標所在音符的 MIDI 音高
+  // 取得當前音符目標
   function updateCurrentTarget() {
     if (osmd.cursor.iterator.EndReached) {
       document.getElementById('target-note').innerText = "🎉 完成！";
       currentTargetMidi = null;
       return;
     }
-
     const voices = osmd.cursor.VoicesUnderCursor();
     if (voices && voices.length > 0) {
       const notes = voices[0].notes;
       if (notes && notes.length > 0 && !notes[0].isRest()) {
         const pitch = notes[0].Pitch;
-        // HalfTone 是 MIDI 編號 - 12 (即 C4 = 60, OSMD halfTone = 48)
         currentTargetMidi = pitch.halfTone + 12;
-        currentTargetName = pitch.PitchClass.name + pitch.Octave;
-        document.getElementById('target-note').innerText = currentTargetName;
+        document.getElementById('target-note').innerText = pitch.PitchClass.name + pitch.Octave;
         return;
       }
     }
@@ -185,13 +304,13 @@
     document.getElementById('target-note').innerText = "休止";
   }
 
-  // 自相關（Autocorrelation）音高偵測算法
+  // 自相關音高偵測
   function autoCorrelate(buf, sampleRate) {
     let SIZE = buf.length;
     let rms = 0;
     for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.025) return -1; // 濾除環境底噪
+    if (rms < 0.02) return -1; // 門檻過濾
 
     let r1 = 0, r2 = SIZE - 1, thres = 0.2;
     for (let i = 0; i < SIZE / 2; i++) {
@@ -216,24 +335,27 @@
     return sampleRate / maxpos;
   }
 
-  // 循環音訊監聽與樂譜對位
+  // 音訊監聽循環
   function processAudioLoop() {
     analyser.getFloatTimeDomainData(dataArray);
     const freq = autoCorrelate(dataArray, audioContext.sampleRate);
+    const stateBadge = document.getElementById('listening-state');
 
-    if (freq !== -1 && freq >= 400 && freq <= 2500) { // 高音直笛主要頻率區間 (C5 約 523Hz)
+    if (freq !== -1 && freq >= 350 && freq <= 2500) { // 收到有效音高
       const midiFloat = 69 + 12 * Math.log2(freq / 440);
       const midiRounded = Math.round(midiFloat);
       const noteName = NOTE_NAMES[midiRounded % 12] + Math.floor(midiRounded / 12 - 1);
 
+      // 即時更新並保持最後的音
       document.getElementById('detected-note').innerText = noteName;
-      document.getElementById('detected-freq').innerText = freq.toFixed(1);
+      document.getElementById('detected-freq').innerText = `${freq.toFixed(1)} Hz`;
+      stateBadge.innerText = "演奏中";
+      stateBadge.className = "status-badge badge-listening";
 
-      // 音高比對判定（允許直笛微幅音準偏差）
-      if (currentTargetMidi && Math.abs(midiFloat - currentTargetMidi) <= 0.45) {
+      // 比對音符
+      if (currentTargetMidi && Math.abs(midiFloat - currentTargetMidi) <= 0.48) {
         hitFramesCount++;
         if (hitFramesCount >= REQUIRED_STABLE_FRAMES) {
-          // 判定過關，游標推進
           osmd.cursor.next();
           updateCurrentTarget();
           hitFramesCount = 0;
@@ -242,15 +364,64 @@
         hitFramesCount = Math.max(0, hitFramesCount - 1);
       }
     } else {
-      document.getElementById('detected-note').innerText = "--";
-      document.getElementById('detected-freq').innerText = "0.0";
+      // 沒有聲音時：保留最後偵測到的音，僅變更狀態標籤
       hitFramesCount = 0;
+      if (document.getElementById('detected-note').innerText !== "--") {
+        stateBadge.innerText = "已鎖定最後音";
+        stateBadge.className = "status-badge badge-held";
+      }
     }
 
     requestAnimationFrame(processAudioLoop);
   }
 
-  // 綁定按鈕點擊事件
+  // 鋼琴發聲引擎 (Web Audio Oscillator)
+  function playTone(freq) {
+    const ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+    // 模擬平滑衰減的音效
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.8);
+  }
+
+  // 建立虛擬鋼琴鍵盤 (C4 ~ D6)
+  function buildPianoKeyboard() {
+    const container = document.getElementById('piano-keyboard');
+    const startMidi = 60; // C4
+    const endMidi = 74;   // D6 (涵蓋直笛大部分音域)
+
+    for (let midi = startMidi; midi <= endMidi; midi++) {
+      const noteIndex = midi % 12;
+      const isBlack = [1, 3, 6, 8, 10].includes(noteIndex);
+      const noteName = NOTE_NAMES[noteIndex] + Math.floor(midi / 12 - 1);
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+
+      const key = document.createElement('div');
+      key.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
+      key.innerText = noteName;
+      key.title = `${noteName} (${freq.toFixed(1)} Hz)`;
+
+      key.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        playTone(freq);
+      });
+
+      container.appendChild(key);
+    }
+  }
+
+  // 事件綁定
   document.getElementById('start-btn').addEventListener('click', async () => {
     try {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -263,17 +434,23 @@
       dataArray = new Float32Array(analyser.fftSize);
 
       document.getElementById('start-btn').disabled = true;
-      document.getElementById('start-btn').innerText = "🎧 正在監聽直笛吹奏...";
+      document.getElementById('start-btn').innerText = "🎧 麥克風持續監聽中...";
 
       processAudioLoop();
     } catch (err) {
-      alert("無法啟動麥克風，請檢查瀏覽器權限設定！");
-      console.error(err);
+      alert("請允許麥克風權限以進行練習！");
     }
   });
 
-  // 網頁載入時渲染樂譜
-  window.addEventListener('load', initOSMD);
+  document.getElementById('song-select').addEventListener('change', (e) => {
+    loadScore(SCORE_LIBRARY[e.target.value]);
+  });
+
+  // 頁面初始化
+  window.addEventListener('load', () => {
+    loadScore(SCORE_LIBRARY.twinkle);
+    buildPianoKeyboard();
+  });
 </script>
 
 </body>
