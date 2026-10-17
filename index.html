@@ -3,10 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#F2F2F7">
+  <meta name="theme-color" content="#F2F2F7" id="meta-theme-color">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="HornNote">
   <title>HornNote — 法國號練習與課堂筆記</title>
+  <!-- Dynamic App Icons & Manifest will be injected here by script -->
+  <link id="app-favicon" rel="icon" type="image/png">
+  <link id="app-touch-icon" rel="apple-touch-icon">
+  <link id="app-manifest" rel="manifest">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
@@ -45,7 +52,6 @@
       transition: background-color 0.25s ease, color 0.25s ease;
     }
 
-    /* Samsung One UI Card Style */
     .oneui-card {
       background-color: var(--bg-card);
       border-radius: 26px;
@@ -58,7 +64,6 @@
       transform: scale(0.985);
     }
 
-    /* Custom Range Slider (One UI Style) */
     input[type="range"].oneui-slider {
       -webkit-appearance: none;
       width: 100%;
@@ -85,7 +90,6 @@
       transform: scale(1.18);
     }
 
-    /* Hide scrollbar */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -94,7 +98,6 @@
       scrollbar-width: none;
     }
 
-    /* Bottom Sheet Animation */
     .modal-backdrop {
       background-color: rgba(0, 0, 0, 0.45);
       backdrop-filter: blur(4px);
@@ -106,7 +109,10 @@
   <!-- Top One UI Viewing Header -->
   <header class="pt-10 pb-5 px-6 flex flex-col justify-end transition-all">
     <div class="flex items-center justify-between mb-2">
-      <span id="current-date-label" class="text-xs font-medium tracking-wide uppercase opacity-60"></span>
+      <div class="flex items-center gap-2">
+        <img id="header-app-icon" alt="Horn Icon" class="w-6 h-6 rounded-lg shadow-sm">
+        <span id="current-date-label" class="text-xs font-medium tracking-wide uppercase opacity-60"></span>
+      </div>
       <div class="flex items-center gap-2">
         <button onclick="openTeacherModal()" class="w-10 h-10 rounded-full flex items-center justify-center oneui-card clickable" title="師資與顏色管理">
           <i class="fa-solid fa-palette text-sm opacity-80"></i>
@@ -114,160 +120,74 @@
         <button onclick="toggleTheme()" class="w-10 h-10 rounded-full flex items-center justify-center oneui-card clickable" title="切換深淺色">
           <i id="theme-icon" class="fa-solid fa-moon text-sm opacity-80"></i>
         </button>
-        <button onclick="openSettingsModal()" class="w-10 h-10 rounded-full flex items-center justify-center oneui-card clickable" title="API 設定">
+        <button onclick="openSettingsModal()" class="w-10 h-10 rounded-full flex items-center justify-center oneui-card clickable relative" title="API 設定">
           <i class="fa-solid fa-gear text-sm opacity-80"></i>
+          <span id="api-missing-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500 absolute top-1.5 right-1.5 hidden"></span>
         </button>
       </div>
     </div>
-    <h1 id="page-main-title" class="text-3xl font-bold tracking-tight">歷史記錄</h1>
-    <p id="page-subtitle" class="text-sm opacity-60 mt-1">追蹤每一堂課與日常練習的軌跡</p>
+    <h1 id="page-main-title" class="text-3xl font-bold tracking-tight">琴房 AI 助教</h1>
+    <p id="page-subtitle" class="text-sm opacity-60 mt-1">隨時詢問過去課堂上老師教過的練習方法</p>
   </header>
 
   <!-- Main Content Container -->
   <main class="px-4 max-w-xl mx-auto space-y-4">
 
-    <!-- ==================== TAB 1: HISTORY (歷史儲存區) ==================== -->
-    <section id="tab-history" class="space-y-4">
-      
-      <!-- Stats Overview Mini Bar -->
-      <div class="grid grid-cols-3 gap-3">
-        <div class="oneui-card p-4 text-center">
-          <div class="text-xs opacity-60 mb-1">近7天平均狀態</div>
-          <div id="stat-avg-score" class="text-2xl font-bold text-[#0072DE]">—</div>
-        </div>
-        <div class="oneui-card p-4 text-center">
-          <div class="text-xs opacity-60 mb-1">累積上課筆記</div>
-          <div id="stat-lesson-count" class="text-2xl font-bold">0</div>
-        </div>
-        <div class="oneui-card p-4 text-center">
-          <div class="text-xs opacity-60 mb-1">累積練習打卡</div>
-          <div id="stat-practice-count" class="text-2xl font-bold">0</div>
-        </div>
-      </div>
-
-      <!-- Filter Pills (All / Lessons / Practice + Teacher Filter) -->
-      <div class="space-y-2.5">
-        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-          <button onclick="setHistoryFilter('all')" id="filter-btn-all" class="px-4 py-2 rounded-full text-sm font-semibold transition-all bg-[#0072DE] text-white shrink-0">
-            全部紀錄
-          </button>
-          <button onclick="setHistoryFilter('lesson')" id="filter-btn-lesson" class="px-4 py-2 rounded-full text-sm font-semibold transition-all oneui-card opacity-80 shrink-0">
-            <i class="fa-solid fa-chalkboard-user mr-1.5 text-xs"></i>上課紀錄
-          </button>
-          <button onclick="setHistoryFilter('practice')" id="filter-btn-practice" class="px-4 py-2 rounded-full text-sm font-semibold transition-all oneui-card opacity-80 shrink-0">
-            <i class="fa-solid fa-music mr-1.5 text-xs"></i>自主練習
-          </button>
-        </div>
-
-        <!-- Dynamic Teacher Color Filter Bar (shown when 'all' or 'lesson' is active) -->
-        <div id="teacher-filter-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-
-      <!-- Search Input -->
-      <div class="oneui-card px-4 py-3 flex items-center gap-3">
-        <i class="fa-solid fa-magnifying-glass opacity-40 text-sm"></i>
-        <input type="text" id="history-search" oninput="renderHistoryList()" placeholder="搜尋曲目、技術關鍵字（如：高音、Kopprasch）..." class="w-full bg-transparent text-sm focus:outline-none">
-      </div>
-
-      <!-- History Cards Feed -->
-      <div id="history-list-container" class="space-y-3 pb-4">
-        <!-- Populated by JS -->
-      </div>
-    </section>
-
-    <!-- ==================== TAB 2: PRACTICE CHECK-IN (練習打卡) ==================== -->
-    <section id="tab-practice" class="space-y-4 hidden">
-      <div class="oneui-card p-5 space-y-5">
+    <!-- ==================== TAB 1: AI COACH (NotebookLM 式問答助教 - 預設首頁) ==================== -->
+    <section id="tab-coach" class="space-y-4">
+      <div class="oneui-card p-5 space-y-3">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-bold text-base">今日練習總評</h3>
-            <p class="text-xs opacity-60">快速滑動記錄今天的綜合手感</p>
+            <h3 class="font-bold text-base">專屬記憶庫問答</h3>
+            <p class="text-xs opacity-60">自動檢索你所有的「上課筆記」與「練習日記」來回答</p>
           </div>
-          <div class="w-12 h-12 rounded-2xl bg-[#0072DE]/10 text-[#0072DE] flex items-center justify-center font-bold text-xl" id="practice-overall-val">
-            7
-          </div>
+          <span id="rag-status-badge" onclick="openSettingsModal()" class="cursor-pointer px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#0072DE]/10 text-[#0072DE]">
+            RAG 記憶庫
+          </span>
         </div>
 
-        <input type="range" id="practice-overall" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('practice-overall-val').innerText = this.value">
-        <div class="flex justify-between text-[11px] opacity-50 px-1">
-          <span>1 (極差/疲勞)</span>
-          <span>5 (平穩日常)</span>
-          <span>10 (巔峰狀態)</span>
-        </div>
-
-        <hr class="border-[var(--border-soft)]">
-
-        <!-- 3 Horn Specific Sub-Metrics -->
-        <div class="space-y-4">
-          <div>
-            <div class="flex justify-between text-xs font-medium mb-1.5">
-              <span><i class="fa-regular fa-face-smile mr-1.5 text-[#0072DE]"></i>嘴唇狀態與耐力 (Chop Status)</span>
-              <span id="val-chop" class="font-bold">7 / 10</span>
-            </div>
-            <input type="range" id="practice-chop" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-chop').innerText = this.value + ' / 10'">
-          </div>
-
-          <div>
-            <div class="flex justify-between text-xs font-medium mb-1.5">
-              <span><i class="fa-solid fa-wind mr-1.5 text-emerald-500"></i>氣息支撐與放鬆度 (Air Support)</span>
-              <span id="val-air" class="font-bold">7 / 10</span>
-            </div>
-            <input type="range" id="practice-air" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-air').innerText = this.value + ' / 10'">
-          </div>
-
-          <div>
-            <div class="flex justify-between text-xs font-medium mb-1.5">
-              <span><i class="fa-solid fa-bullseye mr-1.5 text-amber-500"></i>音準與泛音中心感 (Centering)</span>
-              <span id="val-center" class="font-bold">7 / 10</span>
-            </div>
-            <input type="range" id="practice-center" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-center').innerText = this.value + ' / 10'">
-          </div>
+        <!-- Quick Prompt Chips -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          <button onclick="askQuickQuestion('我今天高音區吹起來很緊、容易破音，之前上課老師是怎麼教我調整的？')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
+            🎺 高音很緊老師怎麼教？
+          </button>
+          <button onclick="askQuickQuestion('幫我整理過去上課中，不同老師給我的所有「基礎熱身與長音練習」方法')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
+            📋 彙整老師給的練習處方
+          </button>
+          <button onclick="askQuickQuestion('根據我過去的練習打卡分數，我在什麼情況下狀態最好？有什麼需要注意的規律？')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
+            📈 分析我的狀態高低規律
+          </button>
         </div>
       </div>
 
-      <!-- Practice Duration & Tags -->
-      <div class="oneui-card p-5 space-y-4">
-        <div class="flex items-center justify-between">
-          <label class="text-sm font-bold">練習日期與時長</label>
-          <div class="flex items-center gap-2">
-            <input type="date" id="practice-date" class="bg-transparent text-xs border border-[var(--border-soft)] rounded-xl px-2.5 py-1.5 focus:outline-none">
-            <input type="number" id="practice-duration" value="90" min="5" max="480" step="15" class="w-16 bg-transparent text-center text-xs font-bold border border-[var(--border-soft)] rounded-xl px-2 py-1.5 focus:outline-none">
-            <span class="text-xs opacity-60">分鐘</span>
-          </div>
+      <!-- Chat Message Box -->
+      <div id="coach-chat-container" class="space-y-3 min-h-[300px] max-h-[52vh] overflow-y-auto px-1">
+        <div class="oneui-card p-4 text-sm leading-relaxed">
+          👋 嗨！我是你的專屬法國號筆記助教。只要你儲存過上課紀錄或每日練習打卡，遇到任何吹奏瓶頸（像是大跳音程、圓滑奏、嘴唇疲勞、特定曲目詮釋），都可以直接問我：「<b>某位老師之前是怎麼講的？</b>」或「<b>我上次狀態好時用了什麼方法？</b>」
         </div>
+      </div>
 
-        <div>
-          <label class="text-xs font-medium opacity-70 block mb-2">今日練習項目 (點擊多選)</label>
-          <div id="practice-tags-container" class="flex flex-wrap gap-2">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <div>
-          <label class="text-xs font-medium opacity-70 block mb-1.5">練習心得 / 遇到的問題與突破</label>
-          <textarea id="practice-notes" rows="3" placeholder="例如：今天先吹了15分鐘低音長音，換氣時想像肩膀下沉，莫札特第一樂章的高音 G 明顯變穩了..." class="w-full rounded-2xl bg-[var(--bg-primary)] p-3.5 text-sm focus:outline-none resize-none"></textarea>
-        </div>
-
-        <button onclick="savePracticeRecord()" class="w-full py-3.5 rounded-full bg-[#0072DE] text-white font-bold text-sm shadow-md active:scale-98 transition-transform">
-          儲存今日練習打卡
+      <!-- Chat Input Bar -->
+      <div class="oneui-card p-2 flex items-center gap-2">
+        <input type="text" id="coach-input" onkeydown="if(event.key==='Enter') sendCoachQuery()" placeholder="問問助教：老師之前怎麼教大跳音程..." class="flex-1 bg-transparent px-3 py-2 text-sm focus:outline-none">
+        <button onclick="sendCoachQuery()" class="w-10 h-10 rounded-full bg-[#0072DE] text-white flex items-center justify-center shrink-0 active:scale-95">
+          <i class="fa-solid fa-paper-plane text-xs"></i>
         </button>
       </div>
     </section>
 
-    <!-- ==================== TAB 3: LESSON LOG & AUDIO UPLOAD (上課音檔與紀錄) ==================== -->
+    <!-- ==================== TAB 2: LESSON LOG & AUDIO UPLOAD (上課音檔與紀錄) ==================== -->
     <section id="tab-lesson" class="space-y-4 hidden">
       
       <!-- Step 1: Teacher & Color Selection -->
       <div class="oneui-card p-5 space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-bold text-base">選擇授課老師與標示顏色</h3>
+            <h3 class="font-bold text-base" id="lesson-form-mode-title">選擇授課老師與標示顏色</h3>
             <p class="text-xs opacity-60">不同老師會以專屬色條顯示在歷史記錄中</p>
           </div>
-          <button onclick="openTeacherModal()" class="text-xs font-semibold text-[#0072DE] px-3 py-1.5 rounded-full bg-[#0072DE]/10">
-            + 新增/編輯老師
+          <button onclick="openTeacherModal()" class="text-xs font-semibold text-[#0072DE] px-3 py-1.5 rounded-full bg-[#0072DE]/10 active:scale-95 transition-transform">
+            <i class="fa-solid fa-pen-to-square mr-1"></i>新增/編輯老師
           </button>
         </div>
 
@@ -329,7 +249,7 @@
         </button>
       </div>
 
-      <!-- Step 3: Structured Lesson Notes (Editable or Auto-filled by AI) -->
+      <!-- Step 3: Structured Lesson Notes -->
       <div class="oneui-card p-5 space-y-4">
         <h3 class="font-bold text-base">課堂結構化筆記</h3>
 
@@ -354,101 +274,216 @@
           <textarea id="lesson-summary" rows="4" placeholder="可由 AI 自動從音檔生成，或手動補充各小節音樂性要求與音檔時間點（如 [12:40] 示範音色）..." class="w-full rounded-2xl bg-[var(--bg-primary)] p-3 text-sm focus:outline-none resize-none"></textarea>
         </div>
 
-        <button onclick="saveLessonRecord()" class="w-full py-3.5 rounded-full bg-[#0072DE] text-white font-bold text-sm shadow-md active:scale-98 transition-transform">
-          儲存這堂上課紀錄
-        </button>
+        <div class="flex gap-2">
+          <button id="btn-cancel-lesson-edit" onclick="cancelEditRecord()" class="hidden w-1/3 py-3.5 rounded-full bg-zinc-500/20 font-bold text-sm">
+            取消編輯
+          </button>
+          <button id="btn-save-lesson" onclick="saveLessonRecord()" class="flex-1 py-3.5 rounded-full bg-[#0072DE] text-white font-bold text-sm shadow-md active:scale-98 transition-transform">
+            儲存這堂上課紀錄
+          </button>
+        </div>
       </div>
     </section>
 
-    <!-- ==================== TAB 4: AI COACH (NotebookLM 式問答助教) ==================== -->
-    <section id="tab-coach" class="space-y-4 hidden">
-      <div class="oneui-card p-5 space-y-3">
+    <!-- ==================== TAB 3: PRACTICE CHECK-IN (練習打卡) ==================== -->
+    <section id="tab-practice" class="space-y-4 hidden">
+      <div class="oneui-card p-5 space-y-5">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-bold text-base">琴房隨身 AI 助教</h3>
-            <p class="text-xs opacity-60">自動檢索你所有的「上課筆記」與「練習日記」來回答</p>
+            <h3 class="font-bold text-base" id="practice-form-mode-title">今日練習總評</h3>
+            <p class="text-xs opacity-60">快速滑動記錄今天的綜合手感</p>
           </div>
-          <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#0072DE]/10 text-[#0072DE]">
-            RAG 記憶庫已連線
-          </span>
+          <div class="w-12 h-12 rounded-2xl bg-[#0072DE]/10 text-[#0072DE] flex items-center justify-center font-bold text-xl" id="practice-overall-val">
+            7
+          </div>
         </div>
 
-        <!-- Quick Prompt Chips -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-          <button onclick="askQuickQuestion('我今天高音區吹起來很緊、容易破音，之前上課老師是怎麼教我調整的？')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
-            🎺 高音很緊老師怎麼教？
-          </button>
-          <button onclick="askQuickQuestion('幫我整理過去上課中，不同老師給我的所有「基礎熱身與長音練習」方法')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
-            📋 彙整老師給的練習處方
-          </button>
-          <button onclick="askQuickQuestion('根據我過去的練習打卡分數，我在什麼情況下狀態最好？有什麼需要注意的規律？')" class="px-3 py-1.5 rounded-full text-xs oneui-card border border-[var(--border-soft)] shrink-0 opacity-85">
-            📈 分析我的狀態高低規律
-          </button>
+        <input type="range" id="practice-overall" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('practice-overall-val').innerText = this.value">
+        <div class="flex justify-between text-[11px] opacity-50 px-1">
+          <span>1 (極差/疲勞)</span>
+          <span>5 (平穩日常)</span>
+          <span>10 (巔峰狀態)</span>
+        </div>
+
+        <hr class="border-[var(--border-soft)]">
+
+        <!-- 3 Horn Specific Sub-Metrics -->
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <span><i class="fa-regular fa-face-smile mr-1.5 text-[#0072DE]"></i>嘴唇狀態與耐力 (Chop Status)</span>
+              <span id="val-chop" class="font-bold">7 / 10</span>
+            </div>
+            <input type="range" id="practice-chop" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-chop').innerText = this.value + ' / 10'">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <span><i class="fa-solid fa-wind mr-1.5 text-emerald-500"></i>氣息支撐與放鬆度 (Air Support)</span>
+              <span id="val-air" class="font-bold">7 / 10</span>
+            </div>
+            <input type="range" id="practice-air" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-air').innerText = this.value + ' / 10'">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <span><i class="fa-solid fa-bullseye mr-1.5 text-amber-500"></i>音準與泛音中心感 (Centering)</span>
+              <span id="val-center" class="font-bold">7 / 10</span>
+            </div>
+            <input type="range" id="practice-center" min="1" max="10" value="7" class="oneui-slider" oninput="document.getElementById('val-center').innerText = this.value + ' / 10'">
+          </div>
         </div>
       </div>
 
-      <!-- Chat Message Box -->
-      <div id="coach-chat-container" class="space-y-3 min-h-[300px] max-h-[52vh] overflow-y-auto px-1">
-        <div class="oneui-card p-4 text-sm leading-relaxed">
-          👋 嗨！我是你的專屬法國號筆記助教。只要你儲存過上課紀錄或每日練習打卡，遇到任何吹奏瓶頸（像是大跳音程、圓滑奏、嘴唇疲勞、特定曲目詮釋），都可以直接問我：「<b>某位老師之前是怎麼講的？</b>」或「<b>我上次狀態好時用了什麼方法？</b>」
+      <!-- Practice Duration & Editable Custom Tags -->
+      <div class="oneui-card p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <label class="text-sm font-bold">練習日期與時長</label>
+          <div class="flex items-center gap-2">
+            <input type="date" id="practice-date" class="bg-transparent text-xs border border-[var(--border-soft)] rounded-xl px-2.5 py-1.5 focus:outline-none">
+            <input type="number" id="practice-duration" value="90" min="5" max="480" step="15" class="w-16 bg-transparent text-center text-xs font-bold border border-[var(--border-soft)] rounded-xl px-2 py-1.5 focus:outline-none">
+            <span class="text-xs opacity-60">分鐘</span>
+          </div>
+        </div>
+
+        <!-- Practice Items Header with Edit Toggle Button -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-medium opacity-70">今日練習項目 (點擊多選)</label>
+            <button onclick="toggleTagEditMode()" id="btn-edit-tags" class="text-xs font-semibold text-[#0072DE] px-3 py-1 rounded-full bg-[#0072DE]/10 active:scale-95 transition-transform">
+              <i class="fa-solid fa-pen mr-1 text-[10px]"></i>編輯項目
+            </button>
+          </div>
+
+          <!-- Add New Practice Tag Input Row (Shown when Edit Mode is active) -->
+          <div id="practice-tag-editor-box" class="hidden mb-3 p-3 rounded-2xl bg-[var(--bg-primary)] space-y-2 border border-[#0072DE]/30">
+            <div class="text-[11px] font-semibold text-[#0072DE]">新增自訂練習項目，或點擊下方標籤的「×」刪除</div>
+            <div class="flex gap-2">
+              <input type="text" id="new-practice-tag-input" onkeydown="if(event.key==='Enter') addCustomPracticeTag()" placeholder="輸入新項目 (如：音階、Strauss、弱奏)..." class="flex-1 rounded-xl bg-[var(--bg-card)] px-3 py-2 text-xs focus:outline-none">
+              <button onclick="addCustomPracticeTag()" class="px-4 py-2 rounded-xl bg-[#0072DE] text-white text-xs font-bold shrink-0">
+                + 新增
+              </button>
+            </div>
+          </div>
+
+          <div id="practice-tags-container" class="flex flex-wrap gap-2">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium opacity-70 block mb-1.5">練習心得 / 遇到的問題與突破</label>
+          <textarea id="practice-notes" rows="3" placeholder="例如：今天先吹了15分鐘低音長音，換氣時想像肩膀下沉，莫札特第一樂章的高音 G 明顯變穩了..." class="w-full rounded-2xl bg-[var(--bg-primary)] p-3.5 text-sm focus:outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btn-cancel-practice-edit" onclick="cancelEditRecord()" class="hidden w-1/3 py-3.5 rounded-full bg-zinc-500/20 font-bold text-sm">
+            取消編輯
+          </button>
+          <button id="btn-save-practice" onclick="savePracticeRecord()" class="flex-1 py-3.5 rounded-full bg-[#0072DE] text-white font-bold text-sm shadow-md active:scale-98 transition-transform">
+            儲存今日練習打卡
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: HISTORY (歷史儲存區) ==================== -->
+    <section id="tab-history" class="space-y-4 hidden">
+      
+      <!-- Stats Overview Mini Bar -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="oneui-card p-4 text-center">
+          <div class="text-xs opacity-60 mb-1">近7次平均狀態</div>
+          <div id="stat-avg-score" class="text-2xl font-bold text-[#0072DE]">—</div>
+        </div>
+        <div class="oneui-card p-4 text-center">
+          <div class="text-xs opacity-60 mb-1">累積上課筆記</div>
+          <div id="stat-lesson-count" class="text-2xl font-bold">0</div>
+        </div>
+        <div class="oneui-card p-4 text-center">
+          <div class="text-xs opacity-60 mb-1">累積練習打卡</div>
+          <div id="stat-practice-count" class="text-2xl font-bold">0</div>
         </div>
       </div>
 
-      <!-- Chat Input Bar -->
-      <div class="oneui-card p-2 flex items-center gap-2">
-        <input type="text" id="coach-input" onkeydown="if(event.key==='Enter') sendCoachQuery()" placeholder="問問助教：老師之前怎麼教大跳音程..." class="flex-1 bg-transparent px-3 py-2 text-sm focus:outline-none">
-        <button onclick="sendCoachQuery()" class="w-10 h-10 rounded-full bg-[#0072DE] text-white flex items-center justify-center shrink-0 active:scale-95">
-          <i class="fa-solid fa-paper-plane text-xs"></i>
-        </button>
+      <!-- Filter Pills (All / Lessons / Practice + Teacher Filter) -->
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <button onclick="setHistoryFilter('all')" id="filter-btn-all" class="px-4 py-2 rounded-full text-sm font-semibold transition-all bg-[#0072DE] text-white shrink-0">
+            全部紀錄
+          </button>
+          <button onclick="setHistoryFilter('lesson')" id="filter-btn-lesson" class="px-4 py-2 rounded-full text-sm font-semibold transition-all oneui-card opacity-80 shrink-0">
+            <i class="fa-solid fa-chalkboard-user mr-1.5 text-xs"></i>上課紀錄
+          </button>
+          <button onclick="setHistoryFilter('practice')" id="filter-btn-practice" class="px-4 py-2 rounded-full text-sm font-semibold transition-all oneui-card opacity-80 shrink-0">
+            <i class="fa-solid fa-music mr-1.5 text-xs"></i>自主練習
+          </button>
+        </div>
+
+        <!-- Dynamic Teacher Color Filter Bar -->
+        <div id="teacher-filter-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Search Input -->
+      <div class="oneui-card px-4 py-3 flex items-center gap-3">
+        <i class="fa-solid fa-magnifying-glass opacity-40 text-sm"></i>
+        <input type="text" id="history-search" oninput="renderHistoryList()" placeholder="搜尋曲目、技術關鍵字（如：高音、Kopprasch）..." class="w-full bg-transparent text-sm focus:outline-none">
+      </div>
+
+      <!-- History Cards Feed -->
+      <div id="history-list-container" class="space-y-3 pb-4">
+        <!-- Populated by JS -->
       </div>
     </section>
 
   </main>
 
-  <!-- ==================== SAMSUNG ONE UI FLOATING BOTTOM TAB BAR ==================== -->
+  <!-- ==================== SAMSUNG ONE UI FLOATING BOTTOM TAB BAR (全新順序) ==================== -->
+  <!-- 左到右：1. AI 助教 -> 2. 上課紀錄 -> 3. 練習打卡 -> 4. 歷史記錄 -->
   <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-md oneui-card px-3 py-2 flex items-center justify-around shadow-lg z-40 backdrop-blur-md bg-opacity-95">
-    <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center py-1 px-4 rounded-2xl text-[#0072DE] font-semibold transition-all">
-      <i class="fa-solid fa-clock-rotate-left text-base mb-0.5"></i>
-      <span class="text-[11px]">歷史記錄</span>
-    </button>
-    <button onclick="switchTab('practice')" id="nav-practice" class="flex flex-col items-center py-1 px-4 rounded-2xl opacity-50 font-medium transition-all">
-      <i class="fa-solid fa-sliders text-base mb-0.5"></i>
-      <span class="text-[11px]">練習打卡</span>
+    <button onclick="switchTab('coach')" id="nav-coach" class="flex flex-col items-center py-1 px-4 rounded-2xl text-[#0072DE] font-semibold transition-all">
+      <i class="fa-solid fa-wand-magic-sparkles text-base mb-0.5"></i>
+      <span class="text-[11px]">AI 助教</span>
     </button>
     <button onclick="switchTab('lesson')" id="nav-lesson" class="flex flex-col items-center py-1 px-4 rounded-2xl opacity-50 font-medium transition-all">
       <i class="fa-solid fa-microphone-lines text-base mb-0.5"></i>
       <span class="text-[11px]">上課紀錄</span>
     </button>
-    <button onclick="switchTab('coach')" id="nav-coach" class="flex flex-col items-center py-1 px-4 rounded-2xl opacity-50 font-medium transition-all">
-      <i class="fa-solid fa-sparkles text-base mb-0.5"></i>
-      <span class="text-[11px]">AI 助教</span>
+    <button onclick="switchTab('practice')" id="nav-practice" class="flex flex-col items-center py-1 px-4 rounded-2xl opacity-50 font-medium transition-all">
+      <i class="fa-solid fa-sliders text-base mb-0.5"></i>
+      <span class="text-[11px]">練習打卡</span>
+    </button>
+    <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center py-1 px-4 rounded-2xl opacity-50 font-medium transition-all">
+      <i class="fa-solid fa-clock-rotate-left text-base mb-0.5"></i>
+      <span class="text-[11px]">歷史記錄</span>
     </button>
   </nav>
 
-  <!-- ==================== MODAL 1: 自訂師資與顏色管理 ==================== -->
+  <!-- ==================== MODAL 1: 自訂師資與顏色管理 (支援直接改名與改色) ==================== -->
   <div id="teacher-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="oneui-card w-full max-w-md rounded-b-none sm:rounded-b-[26px] p-6 space-y-4 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-lg">師資與專屬顏色管理</h3>
+        <h3 class="font-bold text-lg">新增 / 編輯老師與代表色</h3>
         <button onclick="closeTeacherModal()" class="w-8 h-8 rounded-full flex items-center justify-center opacity-60">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <p class="text-xs opacity-60">自訂每位教授、助教或大師班老師的代表顏色，歷史記錄會以該顏色標示。</p>
+      <p class="text-xs opacity-60">你可以直接點擊下方已建立的老師名稱修改文字，或點選左側色塊更換顏色，所有歷史紀錄會自動同步更新！</p>
 
-      <!-- Existing Teachers List -->
-      <div id="teacher-modal-list" class="space-y-2">
+      <!-- Existing Teachers List (Inline Editable Name + Color) -->
+      <div id="teacher-modal-list" class="space-y-2.5">
         <!-- Populated by JS -->
       </div>
 
       <!-- Add New Teacher Form -->
-      <div class="pt-2 border-t border-[var(--border-soft)] space-y-3">
-        <label class="text-xs font-bold block">新增老師 / 課程分類</label>
+      <div class="pt-3 border-t border-[var(--border-soft)] space-y-3">
+        <label class="text-xs font-bold block text-[#0072DE]">＋ 新增一位老師或課程分類</label>
         <div class="flex gap-2">
           <input type="text" id="new-teacher-name" placeholder="輸入老師稱呼 (如：Prof. Vojta / 室內樂)" class="flex-1 rounded-2xl bg-[var(--bg-primary)] px-3.5 py-2.5 text-sm focus:outline-none">
           <input type="color" id="new-teacher-color" value="#0072DE" class="w-11 h-10 rounded-xl bg-transparent cursor-pointer border-0">
         </div>
-        <!-- Preset One UI Pastel/Vibrant Swatches -->
         <div class="flex items-center gap-2">
           <span class="text-[11px] opacity-60">快速色票：</span>
           <button onclick="document.getElementById('new-teacher-color').value='#0072DE'" class="w-6 h-6 rounded-full bg-[#0072DE]"></button>
@@ -467,20 +502,43 @@
 
   <!-- ==================== MODAL 2: GEMINI API 設定與備份 ==================== -->
   <div id="settings-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="oneui-card w-full max-w-md rounded-b-none sm:rounded-b-[26px] p-6 space-y-4">
+    <div class="oneui-card w-full max-w-md rounded-b-none sm:rounded-b-[26px] p-6 space-y-4 max-h-[88vh] overflow-y-auto">
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-lg">AI 與資料庫設定</h3>
+        <h3 class="font-bold text-lg">AI 金鑰與桌面圖示設定</h3>
         <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full flex items-center justify-center opacity-60">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="space-y-2">
-        <label class="text-xs font-bold block">Gemini API Key (用於音檔總結與 AI 助教)</label>
-        <input type="password" id="gemini-api-key-input" placeholder="貼上你的 AIzaSy... 金鑰" class="w-full rounded-2xl bg-[var(--bg-primary)] px-3.5 py-2.5 text-sm focus:outline-none">
-        <p class="text-[11px] opacity-60 leading-relaxed">
-          金鑰僅儲存在你的手機瀏覽器本機端。支援使用 <code>gemini-2.5-flash</code> 直接聆聽長篇上課音檔並檢索歷史筆記。
-        </p>
+      <!-- App Icon Preview Card -->
+      <div class="p-3.5 rounded-2xl bg-[var(--bg-primary)] flex items-center gap-3.5">
+        <img id="settings-icon-preview" alt="App Icon" class="w-14 h-14 rounded-2xl shadow-md shrink-0">
+        <div class="text-xs space-y-1">
+          <div class="font-bold text-sm">發光法國號專屬 App 圖示已內建</div>
+          <p class="opacity-60 leading-relaxed">將此網頁「加入主畫面」時，手機會自動使用這顆黑金發光法國號圖示！你也可以點右側下載圖檔。</p>
+        </div>
+        <a id="download-icon-link" download="horn-icon.png" class="px-3 py-2 rounded-xl oneui-card text-xs font-bold text-[#0072DE] shrink-0">
+          下載圖示
+        </a>
+      </div>
+
+      <!-- API Key Guide & Input -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold">Gemini API Key (必填才能用 AI 與傳音檔)</label>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs font-bold text-[#0072DE] underline">
+            👉 點此免費取得金鑰
+          </a>
+        </div>
+        <input type="password" id="gemini-api-key-input" placeholder="貼上 AIzaSy... 開頭的金鑰" class="w-full rounded-2xl bg-[var(--bg-primary)] px-3.5 py-2.5 text-sm focus:outline-none">
+        <div class="p-3 rounded-2xl bg-[#0072DE]/10 text-xs space-y-1 leading-relaxed">
+          <div class="font-bold text-[#0072DE]">💡 如何 30 秒拿到免費 API Key？</div>
+          <ol class="list-decimal list-inside opacity-80 space-y-0.5 text-[11px]">
+            <li>點擊上方藍色「點此免費取得金鑰」前往 Google AI Studio。</li>
+            <li>登入你的 Google 帳號，點擊藍色按鈕 <b>「Create API key」</b>。</li>
+            <li>複製那串 <code>AIzaSy...</code> 開頭的密碼，貼回上方格子按儲存即可！（金鑰只會存在你的手機裡，不會公開到 GitHub 上被停權）</li>
+          </ol>
+        </div>
       </div>
 
       <div class="pt-2 border-t border-[var(--border-soft)] flex gap-2">
@@ -507,9 +565,117 @@
   </div>
 
   <script>
+    // ==================== 0. 動態生成「發光法國號」原生 App 圖示與 PWA Manifest ====================
+    function generateGlowingHornAppIcon() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      // 1. One UI Squircle Deep Space Background
+      const bgGrad = ctx.createLinearGradient(0, 0, 512, 512);
+      bgGrad.addColorStop(0, '#0A1128');
+      bgGrad.addColorStop(0.5, '#101F42');
+      bgGrad.addColorStop(1, '#070B19');
+
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 512, 512, 115);
+      ctx.fillStyle = bgGrad;
+      ctx.fill();
+
+      // 2. Ambient Golden Glow behind the French Horn
+      const glowGrad = ctx.createRadialGradient(256, 256, 20, 256, 256, 220);
+      glowGrad.addColorStop(0, 'rgba(255, 200, 60, 0.38)');
+      glowGrad.addColorStop(0.6, 'rgba(0, 114, 222, 0.15)');
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(0, 0, 512, 512);
+
+      // 3. Glowing Metallic Gold Style for the French Horn
+      ctx.save();
+      ctx.shadowColor = '#FFB800';
+      ctx.shadowBlur = 28;
+      const goldGrad = ctx.createLinearGradient(100, 100, 412, 412);
+      goldGrad.addColorStop(0, '#FFF3B0');
+      goldGrad.addColorStop(0.45, '#FFD046');
+      goldGrad.addColorStop(1, '#E09000');
+      ctx.strokeStyle = goldGrad;
+      ctx.fillStyle = goldGrad;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Outer Circular Coiled Tubing of French Horn
+      ctx.lineWidth = 22;
+      ctx.beginPath();
+      ctx.arc(245, 255, 118, 0.25 * Math.PI, 1.92 * Math.PI);
+      ctx.stroke();
+
+      // Inner Tubing Loop
+      ctx.lineWidth = 15;
+      ctx.beginPath();
+      ctx.arc(245, 255, 82, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // Leadpipe (吹管與吹嘴) extending to top-left
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.moveTo(115, 165);
+      ctx.quadraticCurveTo(175, 140, 245, 137);
+      ctx.stroke();
+
+      // Mouthpiece (吹嘴)
+      ctx.lineWidth = 20;
+      ctx.beginPath();
+      ctx.moveTo(96, 174);
+      ctx.lineTo(120, 162);
+      ctx.stroke();
+
+      // Flaring Bell (法國號右下角大喇叭口)
+      ctx.beginPath();
+      ctx.moveTo(352, 205);
+      ctx.quadraticCurveTo(375, 295, 430, 345);
+      ctx.quadraticCurveTo(375, 395, 305, 415);
+      ctx.quadraticCurveTo(330, 335, 285, 330);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3 Rotary Valves & Keys (中間三顆轉閥按鍵)
+      for (let i = 0; i < 3; i++) {
+        const vx = 212 + i * 32;
+        const vy = 255;
+        ctx.beginPath();
+        ctx.arc(vx, vy, 11, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      const iconDataUrl = canvas.toDataURL('image/png');
+      document.getElementById('app-favicon').href = iconDataUrl;
+      document.getElementById('app-touch-icon').href = iconDataUrl;
+      document.getElementById('header-app-icon').src = iconDataUrl;
+      document.getElementById('settings-icon-preview').src = iconDataUrl;
+      document.getElementById('download-icon-link').href = iconDataUrl;
+
+      // Dynamically inject Web App Manifest for Android/Samsung "Add to Home Screen"
+      const manifest = {
+        name: "HornNote 法國號練習筆記",
+        short_name: "HornNote",
+        start_url: window.location.href,
+        display: "standalone",
+        background_color: "#0A1128",
+        theme_color: "#0072DE",
+        icons: [
+          { src: iconDataUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      document.getElementById('app-manifest').href = URL.createObjectURL(manifestBlob);
+    }
+
     // ==================== STATE & DEFAULT DATA ====================
     const STORAGE_KEY_RECORDS = 'hornnote_records_v1';
     const STORAGE_KEY_TEACHERS = 'hornnote_teachers_v1';
+    const STORAGE_KEY_TAGS = 'hornnote_practice_tags_v1';
     const STORAGE_KEY_API = 'hornnote_gemini_api_key';
     const STORAGE_KEY_THEME = 'hornnote_theme';
 
@@ -520,13 +686,14 @@
       { id: 't_masterclass', name: 'Masterclass 大師班', color: '#F59E0B' }
     ];
 
-    const PRACTICE_TAGS = [
+    const DEFAULT_PRACTICE_TAGS = [
       '熱身長音', '自然泛音滑音', 'Buzzing 吹嘴', 'Kopprasch',
       'Farkas 基礎', '協奏曲獨奏', '樂團片段 (Orchesterstellen)',
       '高音穩定度', '低音共鳴', '雙吐/三吐', '圓滑奏 (Legato)', '右手塞音 (Stopf)'
     ];
 
     let teachers = JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS)) || DEFAULT_TEACHERS;
+    let practiceTags = JSON.parse(localStorage.getItem(STORAGE_KEY_TAGS)) || DEFAULT_PRACTICE_TAGS;
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY_RECORDS)) || [
       {
         id: 'sample_lesson_1',
@@ -555,12 +722,15 @@
 
     let selectedTeacherId = teachers[0]?.id || 't_vojta';
     let selectedPracticeTags = new Set(['熱身長音']);
-    let currentHistoryFilter = 'all'; // 'all' | 'lesson' | 'practice'
-    let currentTeacherFilter = 'all'; // 'all' | teacherId
+    let isTagEditMode = false;
+    let editingRecordId = null; // 支援修改既有歷史紀錄
+    let currentHistoryFilter = 'all';
+    let currentTeacherFilter = 'all';
     let selectedAudioFile = null;
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
+      generateGlowingHornAppIcon();
       initTheme();
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById('practice-date').value = today;
@@ -571,15 +741,33 @@
 
       const savedKey = localStorage.getItem(STORAGE_KEY_API) || '';
       document.getElementById('gemini-api-key-input').value = savedKey;
+      updateApiStatusIndicator();
 
       renderPracticeTags();
       renderTeacherSelectors();
       renderHistoryList();
+      switchTab('coach'); // 預設打開第一個分頁：AI 助教
     });
 
     function saveToStorage() {
       localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(records));
       localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(teachers));
+      localStorage.setItem(STORAGE_KEY_TAGS, JSON.stringify(practiceTags));
+    }
+
+    function updateApiStatusIndicator() {
+      const hasKey = !!(localStorage.getItem(STORAGE_KEY_API) || '').trim();
+      const dot = document.getElementById('api-missing-dot');
+      const badge = document.getElementById('rag-status-badge');
+      if (hasKey) {
+        dot.classList.add('hidden');
+        badge.innerText = '✓ AI 金鑰已連線';
+        badge.className = 'cursor-pointer px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600';
+      } else {
+        dot.classList.remove('hidden');
+        badge.innerText = '⚠️ 點此設定 API 金鑰';
+        badge.className = 'cursor-pointer px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600';
+      }
     }
 
     // ==================== THEME SWITCHING ====================
@@ -588,6 +776,7 @@
       if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
         document.getElementById('theme-icon').className = 'fa-solid fa-sun text-sm text-amber-400';
+        document.getElementById('meta-theme-color').content = '#000000';
       }
     }
 
@@ -597,16 +786,17 @@
       document.getElementById('theme-icon').className = isDark
         ? 'fa-solid fa-sun text-sm text-amber-400'
         : 'fa-solid fa-moon text-sm opacity-80';
+      document.getElementById('meta-theme-color').content = isDark ? '#000000' : '#F2F2F7';
     }
 
     // ==================== NAVIGATION (TABS) ====================
     function switchTab(tab) {
-      const tabs = ['history', 'practice', 'lesson', 'coach'];
+      const tabs = ['coach', 'lesson', 'practice', 'history'];
       const titles = {
-        history: ['歷史記錄', '追蹤每一堂課與日常練習的軌跡'],
-        practice: ['日常練習打卡', '5 秒鐘快速評分，記錄今日嘴唇與氣息狀態'],
+        coach: ['琴房 AI 助教', '隨時詢問過去課堂上老師教過的練習方法'],
         lesson: ['上課音檔與紀錄', '自訂老師顏色標籤，上傳音檔由 AI 提煉處方'],
-        coach: ['琴房 AI 助教', '隨時詢問過去課堂上老師教過的練習方法']
+        practice: ['日常練習打卡', '5 秒鐘快速評分，可自由增減練習項目'],
+        history: ['歷史記錄', '追蹤每一堂課與日常練習的軌跡']
       };
 
       tabs.forEach(t => {
@@ -627,7 +817,7 @@
       if (tab === 'history') renderHistoryList();
     }
 
-    // ==================== TEACHER & COLOR CUSTOMIZATION ====================
+    // ==================== TEACHER & COLOR CUSTOMIZATION (支援直接改名與改色) ====================
     function getTeacherById(id) {
       return teachers.find(t => t.id === id) || { id: 'unknown', name: '未分類課程', color: '#0072DE' };
     }
@@ -671,17 +861,18 @@
         `;
       }
 
-      // 3. Modal Teacher List
+      // 3. Modal Teacher List (可原地編輯名稱與顏色)
       const modalList = document.getElementById('teacher-modal-list');
       if (modalList) {
         modalList.innerHTML = teachers.map(t => `
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-[var(--bg-primary)]">
-            <div class="flex items-center gap-3">
-              <input type="color" value="${t.color}" onchange="updateTeacherColor('${t.id}', this.value)" class="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer">
-              <span class="text-sm font-semibold">${t.name}</span>
-            </div>
+          <div class="flex items-center gap-2.5 p-2.5 rounded-2xl bg-[var(--bg-primary)]">
+            <input type="color" value="${t.color}" onchange="updateTeacherColor('${t.id}', this.value)" class="w-8 h-8 rounded-xl border-0 bg-transparent cursor-pointer shrink-0" title="點擊更換顏色">
+            <input type="text" value="${t.name.replace(/"/g, '&quot;')}" 
+              oninput="updateTeacherName('${t.id}', this.value)"
+              class="flex-1 bg-[var(--bg-card)] px-3 py-1.5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0072DE]"
+              placeholder="輸入老師名稱">
             ${teachers.length > 1 ? `
-              <button onclick="deleteTeacher('${t.id}')" class="text-xs text-rose-500 px-2 py-1">
+              <button onclick="deleteTeacher('${t.id}')" class="w-8 h-8 rounded-xl text-xs text-rose-500 hover:bg-rose-500/10 flex items-center justify-center shrink-0" title="刪除">
                 <i class="fa-solid fa-trash-can"></i>
               </button>
             ` : ''}
@@ -702,6 +893,8 @@
 
     function closeTeacherModal() {
       document.getElementById('teacher-modal').classList.add('hidden');
+      renderTeacherSelectors();
+      renderHistoryList();
     }
 
     function addNewTeacher() {
@@ -723,6 +916,30 @@
       renderHistoryList();
     }
 
+    function updateTeacherName(id, newName) {
+      const t = teachers.find(item => item.id === id);
+      if (t && newName.trim()) {
+        t.name = newName.trim();
+        saveToStorage();
+        // 即時同步更新上課頁面的按鈕文字與歷史列表
+        const selectorEl = document.getElementById('lesson-teacher-selector');
+        if (selectorEl) {
+          selectorEl.innerHTML = teachers.map(item => {
+            const isSelected = item.id === selectedTeacherId;
+            return `
+              <button onclick="selectLessonTeacher('${item.id}')" 
+                class="p-3 rounded-2xl text-left transition-all flex items-center gap-2.5 border-2"
+                style="border-color: ${isSelected ? item.color : 'transparent'}; background-color: ${isSelected ? item.color + '18' : 'var(--bg-primary)'}">
+                <span class="w-3.5 h-3.5 rounded-full shrink-0" style="background-color: ${item.color}"></span>
+                <span class="text-xs font-bold truncate">${item.name}</span>
+              </button>
+            `;
+          }).join('');
+        }
+        renderHistoryList();
+      }
+    }
+
     function updateTeacherColor(id, newColor) {
       const t = teachers.find(item => item.id === id);
       if (t) {
@@ -734,6 +951,7 @@
     }
 
     function deleteTeacher(id) {
+      if (!confirm('確定要刪除此老師分類嗎？')) return;
       teachers = teachers.filter(t => t.id !== id);
       if (selectedTeacherId === id) selectedTeacherId = teachers[0]?.id;
       saveToStorage();
@@ -741,17 +959,65 @@
       renderHistoryList();
     }
 
-    // ==================== PRACTICE CHECK-IN ====================
+    // ==================== PRACTICE CHECK-IN & CUSTOM EDITABLE TAGS ====================
+    function toggleTagEditMode() {
+      isTagEditMode = !isTagEditMode;
+      const editorBox = document.getElementById('practice-tag-editor-box');
+      const editBtn = document.getElementById('btn-edit-tags');
+      if (isTagEditMode) {
+        editorBox.classList.remove('hidden');
+        editBtn.innerHTML = '<i class="fa-solid fa-check mr-1 text-[10px]"></i>完成編輯';
+        editBtn.className = 'text-xs font-bold bg-[#0072DE] text-white px-3 py-1 rounded-full';
+      } else {
+        editorBox.classList.add('hidden');
+        editBtn.innerHTML = '<i class="fa-solid fa-pen mr-1 text-[10px]"></i>編輯項目';
+        editBtn.className = 'text-xs font-semibold text-[#0072DE] px-3 py-1 rounded-full bg-[#0072DE]/10';
+      }
+      renderPracticeTags();
+    }
+
+    function addCustomPracticeTag() {
+      const input = document.getElementById('new-practice-tag-input');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!practiceTags.includes(val)) {
+        practiceTags.push(val);
+        selectedPracticeTags.add(val);
+        saveToStorage();
+      }
+      input.value = '';
+      renderPracticeTags();
+    }
+
+    function removeCustomPracticeTag(tag, event) {
+      event.stopPropagation();
+      practiceTags = practiceTags.filter(t => t !== tag);
+      selectedPracticeTags.delete(tag);
+      saveToStorage();
+      renderPracticeTags();
+    }
+
     function renderPracticeTags() {
       const container = document.getElementById('practice-tags-container');
-      container.innerHTML = PRACTICE_TAGS.map(tag => {
+      container.innerHTML = practiceTags.map(tag => {
         const active = selectedPracticeTags.has(tag);
-        return `
-          <button onclick="togglePracticeTag('${tag}')" 
-            class="px-3 py-1.5 rounded-full text-xs font-medium transition-all ${active ? 'bg-[#0072DE] text-white shadow-sm' : 'bg-[var(--bg-primary)] opacity-75'}">
-            ${tag}
-          </button>
-        `;
+        if (isTagEditMode) {
+          return `
+            <div class="px-3 py-1.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1.5">
+              <span>${tag}</span>
+              <button onclick="removeCustomPracticeTag('${tag.replace(/'/g, "\\'")}', event)" class="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px]">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          `;
+        } else {
+          return `
+            <button onclick="togglePracticeTag('${tag.replace(/'/g, "\\'")}')" 
+              class="px-3 py-1.5 rounded-full text-xs font-medium transition-all ${active ? 'bg-[#0072DE] text-white shadow-sm' : 'bg-[var(--bg-primary)] opacity-75'}">
+              ${tag}
+            </button>
+          `;
+        }
       }).join('');
     }
 
@@ -765,8 +1031,8 @@
     }
 
     function savePracticeRecord() {
-      const record = {
-        id: 'prac_' + Date.now(),
+      const recordData = {
+        id: editingRecordId || ('prac_' + Date.now()),
         type: 'practice',
         date: document.getElementById('practice-date').value || new Date().toISOString().slice(0, 10),
         overall: Number(document.getElementById('practice-overall').value),
@@ -778,9 +1044,15 @@
         notes: document.getElementById('practice-notes').value.trim()
       };
 
-      records.unshift(record);
+      if (editingRecordId) {
+        const idx = records.findIndex(r => r.id === editingRecordId);
+        if (idx !== -1) records[idx] = recordData;
+      } else {
+        records.unshift(recordData);
+      }
+
       saveToStorage();
-      document.getElementById('practice-notes').value = '';
+      cancelEditRecord();
       switchTab('history');
     }
 
@@ -799,7 +1071,7 @@
       const apiKey = localStorage.getItem(STORAGE_KEY_API);
       if (!apiKey) {
         openSettingsModal();
-        return alert('請先設定你的 Gemini API Key 才能解析上課音檔喔！');
+        return alert('請先在設定視窗貼上你的 Gemini API Key 才能解析上課音檔喔！');
       }
       if (!selectedAudioFile) {
         return alert('請先點選上方的錄音檔上傳區塊，選擇一個上課音檔！');
@@ -810,7 +1082,6 @@
       statusBox.classList.remove('hidden');
 
       try {
-        // Step 1: Upload Audio via Gemini File API (Resumable Upload protocol supports large lesson files)
         statusText.innerText = '步驟 1/2：正在上傳課堂音檔至 Gemini 雲端暫存區...';
         const mimeType = selectedAudioFile.type || 'audio/mp4';
 
@@ -842,7 +1113,6 @@
         const fileData = await uploadRes.json();
         const fileUri = fileData.file.uri;
 
-        // Step 2: Generate Structured Horn Lesson Summary
         statusText.innerText = '步驟 2/2：AI 正在聆聽課堂內容並整理法國號技術處方箋...';
         const prompt = `
 你是一位專業的法國號 (French Horn / Waldhorn) 演奏助教。請仔細聆聽這段上課錄音（可能包含德文、英文或中文指導），並用「繁體中文」整理成 JSON 格式回覆（不要加 markdown 程式碼區塊）：
@@ -889,8 +1159,8 @@
     }
 
     function saveLessonRecord() {
-      const record = {
-        id: 'les_' + Date.now(),
+      const recordData = {
+        id: editingRecordId || ('les_' + Date.now()),
         type: 'lesson',
         date: document.getElementById('lesson-date').value || new Date().toISOString().slice(0, 10),
         teacherId: selectedTeacherId,
@@ -902,10 +1172,66 @@
         audioFileName: selectedAudioFile ? selectedAudioFile.name : null
       };
 
-      records.unshift(record);
-      saveToStorage();
+      if (editingRecordId) {
+        const idx = records.findIndex(r => r.id === editingRecordId);
+        if (idx !== -1) records[idx] = recordData;
+      } else {
+        records.unshift(recordData);
+      }
 
-      // Clear inputs
+      saveToStorage();
+      cancelEditRecord();
+      switchTab('history');
+    }
+
+    // ==================== EDIT EXISTING RECORD (編輯既有上課或練習紀錄) ====================
+    function startEditRecord(id) {
+      const r = records.find(item => item.id === id);
+      if (!r) return;
+      editingRecordId = r.id;
+      document.getElementById('detail-modal').classList.add('hidden');
+
+      if (r.type === 'lesson') {
+        selectedTeacherId = r.teacherId;
+        renderTeacherSelectors();
+        document.getElementById('lesson-date').value = r.date;
+        document.getElementById('lesson-condition').value = r.condition;
+        document.getElementById('lesson-cond-val').innerText = r.condition;
+        document.getElementById('lesson-repertoire').value = r.repertoire || '';
+        document.getElementById('lesson-issues').value = r.issues || '';
+        document.getElementById('lesson-prescriptions').value = r.prescriptions || '';
+        document.getElementById('lesson-summary').value = r.summary || '';
+
+        document.getElementById('lesson-form-mode-title').innerText = '✏️ 正在編輯上課紀錄';
+        document.getElementById('btn-save-lesson').innerText = '更新這堂上課紀錄';
+        document.getElementById('btn-cancel-lesson-edit').classList.remove('hidden');
+        switchTab('lesson');
+      } else {
+        document.getElementById('practice-date').value = r.date;
+        document.getElementById('practice-overall').value = r.overall;
+        document.getElementById('practice-overall-val').innerText = r.overall;
+        document.getElementById('practice-chop').value = r.chop;
+        document.getElementById('val-chop').innerText = r.chop + ' / 10';
+        document.getElementById('practice-air').value = r.air;
+        document.getElementById('val-air').innerText = r.air + ' / 10';
+        document.getElementById('practice-center').value = r.center;
+        document.getElementById('val-center').innerText = r.center + ' / 10';
+        document.getElementById('practice-duration').value = r.duration || 60;
+        selectedPracticeTags = new Set(r.tags || []);
+        renderPracticeTags();
+        document.getElementById('practice-notes').value = r.notes || '';
+
+        document.getElementById('practice-form-mode-title').innerText = '✏️ 正在編輯練習打卡';
+        document.getElementById('btn-save-practice').innerText = '更新練習打卡';
+        document.getElementById('btn-cancel-practice-edit').classList.remove('hidden');
+        switchTab('practice');
+      }
+    }
+
+    function cancelEditRecord() {
+      editingRecordId = null;
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('lesson-date').value = today;
       document.getElementById('lesson-repertoire').value = '';
       document.getElementById('lesson-issues').value = '';
       document.getElementById('lesson-prescriptions').value = '';
@@ -913,8 +1239,15 @@
       selectedAudioFile = null;
       document.getElementById('audio-file-name').innerText = '點擊選取上課錄音檔 (.m4a, .mp3, .wav)';
       document.getElementById('lesson-audio-preview').classList.add('hidden');
+      document.getElementById('lesson-form-mode-title').innerText = '選擇授課老師與標示顏色';
+      document.getElementById('btn-save-lesson').innerText = '儲存這堂上課紀錄';
+      document.getElementById('btn-cancel-lesson-edit').classList.add('hidden');
 
-      switchTab('history');
+      document.getElementById('practice-date').value = today;
+      document.getElementById('practice-notes').value = '';
+      document.getElementById('practice-form-mode-title').innerText = '今日練習總評';
+      document.getElementById('btn-save-practice').innerText = '儲存今日練習打卡';
+      document.getElementById('btn-cancel-practice-edit').classList.add('hidden');
     }
 
     // ==================== HISTORY ARCHIVE RENDERING ====================
@@ -939,7 +1272,6 @@
     }
 
     function renderHistoryList() {
-      // Update Top Stats
       const lessonRecords = records.filter(r => r.type === 'lesson');
       const practiceRecords = records.filter(r => r.type === 'practice');
       document.getElementById('stat-lesson-count').innerText = lessonRecords.length;
@@ -951,7 +1283,6 @@
         : '—';
       document.getElementById('stat-avg-score').innerText = avg;
 
-      // Filter logic
       const query = (document.getElementById('history-search').value || '').toLowerCase();
       const filtered = records
         .filter(r => {
@@ -968,7 +1299,7 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="oneui-card p-10 text-center opacity-50 text-sm">
-            尚無符合條件的紀錄，點擊下方「練習打卡」或「上課紀錄」新增第一筆吧！
+            尚無符合條件的紀錄，點擊下方「上課紀錄」或「練習打卡」新增第一筆吧！
           </div>
         `;
         return;
@@ -1059,9 +1390,14 @@
               <div class="whitespace-pre-line">${r.summary || '無紀錄'}</div>
             </div>
           </div>
-          <button onclick="deleteRecord('${r.id}')" class="w-full py-2.5 rounded-full text-xs font-semibold text-rose-500 border border-rose-500/20">
-            刪除這筆紀錄
-          </button>
+          <div class="flex gap-2 pt-2">
+            <button onclick="startEditRecord('${r.id}')" class="flex-1 py-2.5 rounded-full text-xs font-bold bg-[#0072DE] text-white">
+              <i class="fa-solid fa-pen mr-1"></i>編輯內容
+            </button>
+            <button onclick="deleteRecord('${r.id}')" class="px-5 py-2.5 rounded-full text-xs font-semibold text-rose-500 border border-rose-500/20">
+              刪除
+            </button>
+          </div>
         `;
       } else {
         content.innerHTML = `
@@ -1080,12 +1416,20 @@
             <div class="p-2.5 rounded-2xl bg-[var(--bg-primary)]"><div class="text-[10px] opacity-60">氣息</div><div class="font-bold text-base">${r.air}</div></div>
             <div class="p-2.5 rounded-2xl bg-[var(--bg-primary)]"><div class="text-[10px] opacity-60">音準</div><div class="font-bold text-base">${r.center}</div></div>
           </div>
+          <div class="flex flex-wrap gap-1.5">
+            ${(r.tags || []).map(tag => `<span class="text-xs px-2.5 py-1 rounded-lg bg-[var(--bg-primary)]">#${tag}</span>`).join('')}
+          </div>
           <div class="p-3.5 rounded-2xl bg-[var(--bg-primary)] text-sm whitespace-pre-line">
             ${r.notes || '無文字筆記'}
           </div>
-          <button onclick="deleteRecord('${r.id}')" class="w-full py-2.5 rounded-full text-xs font-semibold text-rose-500 border border-rose-500/20">
-            刪除這筆紀錄
-          </button>
+          <div class="flex gap-2 pt-2">
+            <button onclick="startEditRecord('${r.id}')" class="flex-1 py-2.5 rounded-full text-xs font-bold bg-[#0072DE] text-white">
+              <i class="fa-solid fa-pen mr-1"></i>編輯內容
+            </button>
+            <button onclick="deleteRecord('${r.id}')" class="px-5 py-2.5 rounded-full text-xs font-semibold text-rose-500 border border-rose-500/20">
+              刪除
+            </button>
+          </div>
         `;
       }
       modal.classList.remove('hidden');
@@ -1113,7 +1457,7 @@
       const apiKey = localStorage.getItem(STORAGE_KEY_API);
       if (!apiKey) {
         openSettingsModal();
-        return alert('請先填入 Gemini API Key 才能詢問 AI 助教喔！');
+        return alert('請先在設定視窗貼上 Gemini API Key 才能詢問 AI 助教喔！');
       }
 
       const chatContainer = document.getElementById('coach-chat-container');
@@ -1137,7 +1481,6 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
       try {
-        // Build NotebookLM style context from user's saved records
         const formattedHistory = records.map(r => {
           if (r.type === 'lesson') {
             const teacher = getTeacherById(r.teacherId);
@@ -1195,11 +1538,12 @@ ${formattedHistory}
     function saveApiKey() {
       const key = document.getElementById('gemini-api-key-input').value.trim();
       localStorage.setItem(STORAGE_KEY_API, key);
+      updateApiStatusIndicator();
       closeSettingsModal();
     }
 
     function exportAllData() {
-      const payload = { teachers, records, exportedAt: new Date().toISOString() };
+      const payload = { teachers, practiceTags, records, exportedAt: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -1215,8 +1559,10 @@ ${formattedHistory}
         try {
           const data = JSON.parse(e.target.result);
           if (data.teachers) teachers = data.teachers;
+          if (data.practiceTags) practiceTags = data.practiceTags;
           if (data.records) records = data.records;
           saveToStorage();
+          renderPracticeTags();
           renderTeacherSelectors();
           renderHistoryList();
           closeSettingsModal();
